@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="utf-8" />
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -20,10 +20,14 @@
       body {
         width: 100%;
         height: 100%;
-        position: absolute;
+        position: absolute; 
         margin: 0px;
         padding: 0px;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
       }
       #map {
         position: absolute;
@@ -38,15 +42,49 @@
         left: 10px;
         z-index: 1;
       }
+      .ip-tracker {
+        position: relative;
+        bottom: 42vh;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+      }
+      .input-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      input[type="text"] {
+        padding: 10px;
+        border: 2px solid #ccc;
+        border-radius: 5px;
+        font-size: 16px;
+        margin-left: 10px; /* Add margin to create space between input and button */
+      }
+      button {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
     </style>
     <title>IP-finder</title>
-  </head>
-  <body>
+</head>
+<body>
     <div id="map"></div>
     <div id="input">
-      <input type="text" id="ipInput" placeholder="Enter IP Address" />
-      <button id="searchBtn">Search</button>
+        <input type="text" id="ipInput" placeholder="Enter IP Address" />
+        <button id="searchBtn">Search</button>
     </div>
+    <div class="ip-tracker">IP Address Tracker</div>
     <script>
     const platform = new H.service.Platform({
         apikey: 'aeBu0GkfKm7QWDg1tXqpul8XcdwwzqpFljU0XxPfeiU' // Replace with your HERE API key
@@ -70,48 +108,26 @@
     const searchBtn = document.getElementById('searchBtn');
 
     searchBtn.addEventListener('click', async () => {
-    const ipAddress = ipInput.value;
+        const ipAddress = ipInput.value;
 
-    // Fetch the geographical coordinates corresponding to the IP address
-    const ipApiResponse = await fetch(`https://ipapi.co/${ipAddress}/json/`);
-    const ipLocationData = await ipApiResponse.json();
-    console.log("IP Geolocation Data:", ipLocationData); // Log the IP geolocation data
+        // Fetch the IP geolocation data
+        const ipApiResponse = await fetch(`https://ipinfo.io/${ipAddress}/json`);
+        const ipLocationData = await ipApiResponse.json();
+        console.log("IP Geolocation Data:", ipLocationData); // Log the IP geolocation data
 
-    // Extract latitude and longitude from the IP location data
-    const { latitude, longitude } = ipLocationData;
+        // Extract latitude and longitude from the IP location data
+        const [latitude, longitude] = ipLocationData.loc.split(',');
 
-    // Use the obtained coordinates to perform reverse geocoding
-    const service = platform.getSearchService();
+        // Use the obtained coordinates to center the map
+        map.setCenter({ lat: parseFloat(latitude), lng: parseFloat(longitude) });
+        
+        //smooth zoom with animation
+        map.setZoom(14, {duration:1000});
 
-    service.reverseGeocode(
-        {
-            at: `${latitude},${longitude}` // Provide the coordinates using 'at' parameter
-        },
-        (result) => {
-            console.log("Reverse Geocoding Result:", result); // Log the reverse geocoding result
-
-            if (result && result.Response && result.Response.View && result.Response.View.length > 0 && result.Response.View[0].Result.length > 0) {
-                const { DisplayPosition, Address } = result.Response.View[0].Result[0].Location;
-                const position = { lat: DisplayPosition.Latitude, lng: DisplayPosition.Longitude };
-                const address = Address.Label;
-
-                map.setCenter(position);
-                map.setZoom(14);
-
-                const bubble = new H.ui.InfoBubble(position, { content: address });
-                ui.addBubble(bubble);
-            } else {
-                alert("No location found for the provided IP address.");
-            }
-        },
-        (error) => {
-            console.error("Error occurred during reverse geocoding:", error);
-            alert("An error occurred during reverse geocoding. Please try again later.");
-        }
-    );
-});
-
-
-</script>
+        // Display a marker at the location
+        const marker = new H.map.Marker({ lat: parseFloat(latitude), lng: parseFloat(longitude) });
+        map.addObject(marker);
+    });
+    </script>
 </body>
 </html>
